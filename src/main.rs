@@ -1,4 +1,7 @@
-use std::{collections::HashSet, ops::Deref};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 
 use colored::{ColoredString, Colorize};
 use dyn_fmt::AsStrFormatExt;
@@ -77,8 +80,7 @@ impl GameStruct {
         None
     }
 
-    fn display_guesses(&self) -> () {
-        //display guessed letters and color them
+    fn display_guesed_letters(&self) -> () {
         let mut guessed_letters = self
             .guessed_letters
             .clone()
@@ -87,11 +89,13 @@ impl GameStruct {
         guessed_letters.sort_by(|a, b| a.to_lowercase().cmp(b.to_lowercase()));
         let guessedstr: String = guessed_letters.iter().collect();
         let mut guessvalues: Vec<ColoredString> = vec![];
+        let mut guessvaluesltr: Vec<String> = vec![];
         for c in guessedstr.chars() {
             for guess in self.guesses.to_vec().iter() {
                 for (pos, guess_ltr) in guess.chars().enumerate() {
                     let correct_ltr_at_idx = self.word.chars().nth(pos).unwrap();
-                    if c == guess_ltr {
+                    if c == guess_ltr && !guessvaluesltr.contains(&c.to_string()) {
+                        //check for dupes based on letter
                         if guess_ltr == correct_ltr_at_idx {
                             //TODO need to replace the previous value and move this to own method
                             guessvalues.push(format!("{}", c).green());
@@ -100,16 +104,22 @@ impl GameStruct {
                         } else {
                             guessvalues.push(format!("{}", c).red());
                         }
+                        guessvaluesltr.push(c.to_string());
                     }
                 }
             }
         }
+
         let mut new_str = "".to_string();
         for _ in 0..guessvalues.len() {
             new_str.push_str("{}");
         }
         new_str = new_str.format(&guessvalues);
         println!("Guessed values: {}", new_str);
+    }
+
+    fn display_guesses(&self) -> () {
+        //display guessed letters and color them
         //loop through all guesses and print with colors
         for word in self.guesses.to_vec().iter() {
             let mut values: Vec<ColoredString> = vec![];
@@ -126,6 +136,7 @@ impl GameStruct {
             let wordstr = "{}{}{}{}{}".format(&values) as String;
             println!("{}", wordstr);
         }
+        self.display_guesed_letters();
     }
 }
 
@@ -164,7 +175,7 @@ async fn main() {
                 GameResult::Lose => {
                     return println!("You lose!");
                 }
-                _ => (),
+                _ => unreachable!(),
             }
         }
     }
