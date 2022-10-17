@@ -89,22 +89,49 @@ impl GameStruct {
         guessed_letters.sort_by(|a, b| a.to_lowercase().cmp(b.to_lowercase()));
         let guessedstr: String = guessed_letters.iter().collect();
         let mut guessvalues: Vec<ColoredString> = vec![];
-        let mut guessvaluesltr: Vec<String> = vec![];
+        let mut guessvaluesltr: Vec<GuessValues> = vec![];
         for c in guessedstr.chars() {
-            for guess in self.guesses.to_vec().iter() {
+            for guess in self.guesses.to_vec().iter().rev() {
                 for (pos, guess_ltr) in guess.chars().enumerate() {
                     let correct_ltr_at_idx = self.word.chars().nth(pos).unwrap();
-                    if c == guess_ltr && !guessvaluesltr.contains(&c.to_string()) {
+                    //we need to overwrite if its red or yellow. if its green leave it
+                    if c == guess_ltr {
                         //check for dupes based on letter
                         if guess_ltr == correct_ltr_at_idx {
-                            //TODO need to replace the previous value and move this to own method
-                            guessvalues.push(format!("{}", c).green());
+                            //replace dont push
+                            let idx = guessvaluesltr
+                                .iter()
+                                .position(|o| o.color == Color::Green || o.letter == c.to_string());
+                            if let Some(idx) = idx {
+                                guessvalues.push(format!("{}", c).green());
+                                guessvaluesltr[idx] = GuessValues {
+                                    letter: c.to_string(),
+                                    color: Color::Green,
+                                };
+                            } else {
+                                guessvalues.push(format!("{}", c).green());
+                                guessvaluesltr.push(GuessValues {
+                                    letter: c.to_string(),
+                                    color: Color::Green,
+                                });
+                            }
                         } else if self.word.contains(guess_ltr) {
-                            guessvalues.push(format!("{}", c).yellow());
+                            if !guessvaluesltr.iter().any(|o| o.has_ltr(c.to_string())) {
+                                guessvalues.push(format!("{}", c).yellow());
+                                guessvaluesltr.push(GuessValues {
+                                    letter: c.to_string(),
+                                    color: Color::Yellow,
+                                });
+                            }
                         } else {
-                            guessvalues.push(format!("{}", c).red());
+                            if !guessvaluesltr.iter().any(|o| o.has_ltr(c.to_string())) {
+                                guessvalues.push(format!("{}", c).red());
+                                guessvaluesltr.push(GuessValues {
+                                    letter: c.to_string(),
+                                    color: Color::Red,
+                                });
+                            }
                         }
-                        guessvaluesltr.push(c.to_string());
                     }
                 }
             }
@@ -138,6 +165,27 @@ impl GameStruct {
         }
         self.display_guesed_letters();
     }
+}
+
+pub struct GuessValues {
+    letter: String,
+    color: Color,
+}
+
+impl GuessValues {
+    fn has_ltr(&self, ltr: String) -> bool {
+        self.letter == ltr
+    }
+    fn is_not_green(&self, ltr: String) -> bool {
+        self.has_ltr(ltr) && self.color != Color::Green
+    }
+}
+
+#[derive(PartialEq)]
+pub enum Color {
+    Green,
+    Yellow,
+    Red,
 }
 
 pub enum GameResult {
