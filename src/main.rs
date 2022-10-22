@@ -74,75 +74,60 @@ impl GameStruct {
         if guess == self.word {
             return Some(GameResult::Win);
         }
-        if self.guesses.len() > 4 {
+        //if number of guesses is more than 5 then game over
+        if self.guesses.len() >= 5 {
             return Some(GameResult::Lose);
         }
         None
     }
 
-    fn display_guesed_letters(&self) -> () {
-        let mut guessed_letters = self
-            .guessed_letters
-            .clone()
-            .into_iter()
-            .collect::<Vec<char>>();
-        guessed_letters.sort_by(|a, b| a.to_lowercase().cmp(b.to_lowercase()));
-        let guessedstr: String = guessed_letters.iter().collect();
-        let mut guessvalues: Vec<ColoredString> = vec![];
-        let mut guessvaluesltr: Vec<GuessValues> = vec![];
-        for c in guessedstr.chars() {
-            for guess in self.guesses.to_vec().iter().rev() {
-                for (pos, guess_ltr) in guess.chars().enumerate() {
-                    let correct_ltr_at_idx = self.word.chars().nth(pos).unwrap();
-                    //we need to overwrite if its red or yellow. if its green leave it
-                    if c == guess_ltr {
-                        //check for dupes based on letter
-                        if guess_ltr == correct_ltr_at_idx {
-                            //replace dont push
-                            let idx = guessvaluesltr
-                                .iter()
-                                .position(|o| o.color == Color::Green || o.letter == c.to_string());
-                            if let Some(idx) = idx {
-                                guessvalues.push(format!("{}", c).green());
-                                guessvaluesltr[idx] = GuessValues {
-                                    letter: c.to_string(),
-                                    color: Color::Green,
-                                };
-                            } else {
-                                guessvalues.push(format!("{}", c).green());
-                                guessvaluesltr.push(GuessValues {
-                                    letter: c.to_string(),
-                                    color: Color::Green,
-                                });
-                            }
-                        } else if self.word.contains(guess_ltr) {
-                            if !guessvaluesltr.iter().any(|o| o.has_ltr(c.to_string())) {
-                                guessvalues.push(format!("{}", c).yellow());
-                                guessvaluesltr.push(GuessValues {
-                                    letter: c.to_string(),
-                                    color: Color::Yellow,
-                                });
-                            }
-                        } else {
-                            if !guessvaluesltr.iter().any(|o| o.has_ltr(c.to_string())) {
-                                guessvalues.push(format!("{}", c).red());
-                                guessvaluesltr.push(GuessValues {
-                                    letter: c.to_string(),
-                                    color: Color::Red,
-                                });
-                            }
-                        }
+    fn get_color_for_ltr(&self, ltr: &char) -> Color {
+        //loop through each letter of the guesses
+        for guess in &self.guesses {
+            //for each letter of guess
+            for (i, c) in guess.chars().enumerate() {
+                //if the letter is the same as the letter we are checking
+                if c == *ltr {
+                    //if the letter is in the same position as the letter we are checking
+                    if self.word.chars().nth(i).unwrap() == *ltr {
+                        return Color::Green;
                     }
+                    //if the letter is in the word but not in the same position
+                    if self.word.contains(*ltr) {
+                        return Color::Yellow;
+                    }
+                    //else return red
+                    return Color::Red;
                 }
             }
         }
+        Color::Green
+    }
 
-        let mut new_str = "".to_string();
-        for _ in 0..guessvalues.len() {
-            new_str.push_str("{}");
+    fn display_guesed_letters(&self) -> () {
+        //get the guessed letters and find the color
+        //initialize empty vec of colored strings
+        let mut colored_letters: Vec<ColoredString> = vec![];
+        //go through each guessed letter
+        for ltr in self.guessed_letters.iter() {
+            //get the color for the letter
+            let color = self.get_color_for_ltr(ltr);
+            //match color and push color to vec
+            match color {
+                Color::Green => colored_letters.push(ltr.to_string().green()),
+                Color::Yellow => colored_letters.push(ltr.to_string().yellow()),
+                Color::Red => colored_letters.push(ltr.to_string().red()),
+            }
         }
-        new_str = new_str.format(&guessvalues);
-        println!("Guessed values: {}", new_str);
+        //print the vec
+        //create an empty string with capacity of length of colored_letters
+        let mut s = String::with_capacity(colored_letters.len());
+        //for each colored letter push {} into string
+        for _ in 0..colored_letters.len() {
+            s.push_str("{}");
+        }
+        s = s.format(&colored_letters);
+        println!("Guessed letters {}", s);
     }
 
     fn display_guesses(&self) -> () {
@@ -164,20 +149,6 @@ impl GameStruct {
             println!("{}", wordstr);
         }
         self.display_guesed_letters();
-    }
-}
-
-pub struct GuessValues {
-    letter: String,
-    color: Color,
-}
-
-impl GuessValues {
-    fn has_ltr(&self, ltr: String) -> bool {
-        self.letter == ltr
-    }
-    fn is_not_green(&self, ltr: String) -> bool {
-        self.has_ltr(ltr) && self.color != Color::Green
     }
 }
 
